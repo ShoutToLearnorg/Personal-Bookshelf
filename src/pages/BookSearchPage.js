@@ -119,12 +119,20 @@ const BookSearchPage = () => {
     setLoading(true);
     setTitle('Popular Books');
     try {
-      const response = await fetch(`https://openlibrary.org/subjects/latest.json?limit=10`);
+      const response = await fetch(`https://openlibrary.org/subjects/popular.json?limit=10`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      setBooks(data.works);
+      // Map the data to match the format expected by the BookCard component
+      const formattedBooks = data.works.map(book => ({
+        key: book.key,
+        title: book.title,
+        author_name: book.authors.map(author => author.name),
+        cover_i: book.cover_id,
+        edition_count: book.edition_count,
+      }));
+      setBooks(formattedBooks);
     } catch (error) {
       setError(error.message);
       console.error('Failed to fetch popular books:', error);
@@ -132,6 +140,7 @@ const BookSearchPage = () => {
       setLoading(false);
     }
   };
+  
 
   const handleInputChange = (e) => {
     setQuery(e.target.value);
