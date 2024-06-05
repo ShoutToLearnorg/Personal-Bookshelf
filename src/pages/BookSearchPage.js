@@ -119,7 +119,7 @@ const BookSearchPage = () => {
     setLoading(true);
     setTitle('Popular Books');
     try {
-      const response = await fetch(`https://openlibrary.org/subjects/popular.json?limit=10`);
+      const response = await fetch(`https://openlibrary.org/subjects/recommended.json?limit=10`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
