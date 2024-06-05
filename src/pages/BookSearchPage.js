@@ -17,6 +17,10 @@ const SearchInput = styled.input`
   font-size: 16px;
 `;
 
+const Title = styled.h2`
+  margin-bottom: 20px;
+`;
+
 const BookList = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -35,6 +39,8 @@ const BookCard = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
+  opacity: ${({ loading }) => (loading ? 0.5 : 1)};
+  transition: opacity 0.3s ease;
 `;
 
 const BookCover = styled.img`
@@ -79,54 +85,79 @@ const AddButton = styled.button`
 const BookSearchPage = () => {
   const [query, setQuery] = useState('');
   const [books, setBooks] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [title, setTitle] = useState('Popular Books');
 
   useEffect(() => {
-    const searchBooks = async () => {
-      try {
-        const response = await fetch(`https://openlibrary.org/search.json?q=${query}&limit=10&page=1`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        setBooks(data.docs);
-      } catch (error) {
-        setError(error.message);
-        console.error('Failed to fetch books:', error);
-      }
-    };
-
-    const debounceSearch = setTimeout(() => {
-      if (query.trim() !== '') {
-        searchBooks();
-      } else {
-        setBooks([]);
-      }
-    }, 500);
-
-    return () => clearTimeout(debounceSearch);
+    if (!query) {
+      fetchPopularBooks();
+    } else {
+      fetchBooks(query);
+    }
   }, [query]);
+
+  const fetchBooks = async (query) => {
+    setLoading(true);
+    setTitle('Your Search Results');
+    try {
+      const response = await fetch(`https://openlibrary.org/search.json?q=${query}&limit=10&page=1`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setBooks(data.docs);
+    } catch (error) {
+      setError(error.message);
+      console.error('Failed to fetch books:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPopularBooks = async () => {
+    setLoading(true);
+    setTitle('Popular Books');
+    try {
+      const response = await fetch(`https://openlibrary.org/subjects/popular.json?limit=10`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setBooks(data.works);
+    } catch (error) {
+      setError(error.message);
+      console.error('Failed to fetch popular books:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setQuery(e.target.value);
+  };
 
   const addToBookshelf = (book) => {
     const bookshelf = JSON.parse(localStorage.getItem('bookshelf')) || [];
     bookshelf.push(book);
     localStorage.setItem('bookshelf', JSON.stringify(bookshelf));
-    // Display toast message
-    toast.success('Book added to Bookshelf',);
+    toast.success(`Added ${book.title} to bookshelf!`);
   };
 
   return (
     <SearchContainer>
+      <ToastContainer />
       <SearchInput
         type="text"
         placeholder="Search for books..."
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={handleInputChange}
       />
       {error && <p>Error: {error}</p>}
+      <Title>{title}</Title>
       <BookList>
         {books.map((book, index) => (
-          <BookCard key={`${book.key}-${index}`}>
+          <BookCard key={`${book.key}-${index}`} loading={loading}>
             <BookCover
               src={`https://covers.openlibrary.org/b/id/${book.cover_i}-M.jpg`}
               alt={book.title}
@@ -138,7 +169,6 @@ const BookSearchPage = () => {
           </BookCard>
         ))}
       </BookList>
-      <ToastContainer />
     </SearchContainer>
   );
 };
